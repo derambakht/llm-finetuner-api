@@ -66,7 +66,7 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 
 # ===== GPU Stage (with CUDA) =====
-FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04 as gpu
+FROM nvidia/cuda:12.6.3-devel-ubuntu22.04 as gpu
 
 WORKDIR /app
 
@@ -79,6 +79,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libgomp1 \
     curl \
+    git \
     && rm -rf /var/lib/apt/lists/* \
     && ln -sf /usr/bin/python3.11 /usr/bin/python \
     && ln -sf /usr/bin/python3.11 /usr/bin/python3 \
@@ -87,9 +88,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy requirements and install dependencies
 COPY requirements.txt .
 
-# Install PyTorch with CUDA 12.4 support and other requirements
+# Install PyTorch Nightly with CUDA 12.6 support (includes Blackwell sm_120)
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124 && \
+    pip install --no-cache-dir --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu126 && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
