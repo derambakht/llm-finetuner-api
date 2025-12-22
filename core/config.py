@@ -2,14 +2,21 @@
 Application configuration settings using Pydantic Settings.
 """
 import os
-from typing import List, Optional, Union
+from typing import List, Optional
 from functools import lru_cache
-from pydantic_settings import BaseSettings
-from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, computed_field
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
+    
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore"
+    )
     
     # Application settings
     APP_NAME: str = "LLM Fine-Tuner API"
@@ -19,16 +26,14 @@ class Settings(BaseSettings):
     # API settings
     API_V1_PREFIX: str = "/api/v1"
     
-    # Security
-    API_KEYS: List[str] = Field(default_factory=lambda: ["default-dev-key"])
+    # Security - stored as comma-separated string
+    API_KEYS_STR: str = Field(default="default-dev-key", alias="API_KEYS")
     
-    @field_validator('API_KEYS', mode='before')
-    @classmethod
-    def parse_api_keys(cls, v: Union[str, List[str]]) -> List[str]:
-        """Parse API_KEYS from comma-separated string or list."""
-        if isinstance(v, str):
-            return [key.strip() for key in v.split(',') if key.strip()]
-        return v
+    @computed_field
+    @property
+    def API_KEYS(self) -> List[str]:
+        """Parse API_KEYS from comma-separated string."""
+        return [key.strip() for key in self.API_KEYS_STR.split(',') if key.strip()]
     
     # Hugging Face
     HF_TOKEN: Optional[str] = None
@@ -83,11 +88,6 @@ class Settings(BaseSettings):
         for dir_path in [self.DATA_DIR, self.UPLOADS_DIR, self.JOBS_DIR, 
                          self.MODELS_DIR, self.LOGS_DIR]:
             os.makedirs(dir_path, exist_ok=True)
-    
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
 
 
 @lru_cache()
