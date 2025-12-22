@@ -268,7 +268,11 @@ def get_default_lora_target_modules(model_name: str) -> List[str]:
     if any(x in model_lower for x in ["llama", "mistral", "vicuna", "alpaca"]):
         return ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
     
-    # Phi models
+    # Phi-3 models (different architecture from Phi-2)
+    if "phi-3" in model_lower or "phi3" in model_lower:
+        return ["qkv_proj", "o_proj", "gate_up_proj", "down_proj"]
+    
+    # Phi-2 and older Phi models
     if "phi" in model_lower:
         return ["q_proj", "k_proj", "v_proj", "dense", "fc1", "fc2"]
     
