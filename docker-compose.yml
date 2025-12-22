@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # ===== CPU-only version =====
+  llm-finetuner-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: llm-finetuner-api:latest
+    container_name: llm-finetuner-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=false
+      - API_KEYS=your-secure-api-key-here
+      - HF_TOKEN=${HF_TOKEN:-}
+      - HF_CACHE_DIR=/app/hf_cache
+      - DATABASE_URL=sqlite:///./data/finetuner.db
+    volumes:
+      # Persistent data storage
+      - ./data:/app/data
+      - ./trained_models:/app/trained_models
+      # HuggingFace cache (to avoid re-downloading models)
+      - hf_cache:/app/hf_cache
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    profiles:
+      - cpu
+
+  # ===== GPU version with NVIDIA CUDA =====
+  llm-finetuner-api-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: gpu
+    image: llm-finetuner-api:gpu
+    container_name: llm-finetuner-api-gpu
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=false
+      - API_KEYS=your-secure-api-key-here
+      - HF_TOKEN=${HF_TOKEN:-}
+      - HF_CACHE_DIR=/app/hf_cache
+      - DATABASE_URL=sqlite:///./data/finetuner.db
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      # Persistent data storage
+      - ./data:/app/data
+      - ./trained_models:/app/trained_models
+      # HuggingFace cache (to avoid re-downloading models)
+      - hf_cache:/app/hf_cache
+    # GPU support (requires nvidia-docker2)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    profiles:
+      - gpu
+
+volumes:
+  hf_cache:
+    name: llm-finetuner-hf-cache
+
+networks:
+  default:
+    name: llm-finetuner-network
