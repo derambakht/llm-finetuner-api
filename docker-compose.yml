@@ -14,7 +14,7 @@ services:
       - "8000:8000"
     environment:
       - DEBUG=false
-      - API_KEYS=your-secure-api-key-here
+      - API_KEYS=${API_KEYS:-default-dev-key}
       - HF_TOKEN=${HF_TOKEN:-}
       - HF_CACHE_DIR=/app/hf_cache
       - DATABASE_URL=sqlite:///./data/finetuner.db
@@ -46,7 +46,7 @@ services:
       - "8000:8000"
     environment:
       - DEBUG=false
-      - API_KEYS=your-secure-api-key-here
+      - API_KEYS=${API_KEYS:-default-dev-key}
       - HF_TOKEN=${HF_TOKEN:-}
       - HF_CACHE_DIR=/app/hf_cache
       - DATABASE_URL=sqlite:///./data/finetuner.db

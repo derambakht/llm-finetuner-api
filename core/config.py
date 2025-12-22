@@ -2,10 +2,10 @@
 Application configuration settings using Pydantic Settings.
 """
 import os
-from typing import List, Optional
+from typing import List, Optional, Union
 from functools import lru_cache
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, field_validator
 
 
 class Settings(BaseSettings):
@@ -21,6 +21,14 @@ class Settings(BaseSettings):
     
     # Security
     API_KEYS: List[str] = Field(default_factory=lambda: ["default-dev-key"])
+    
+    @field_validator('API_KEYS', mode='before')
+    @classmethod
+    def parse_api_keys(cls, v: Union[str, List[str]]) -> List[str]:
+        """Parse API_KEYS from comma-separated string or list."""
+        if isinstance(v, str):
+            return [key.strip() for key in v.split(',') if key.strip()]
+        return v
     
     # Hugging Face
     HF_TOKEN: Optional[str] = None
