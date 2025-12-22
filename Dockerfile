@@ -66,7 +66,7 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 
 # ===== GPU Stage (with CUDA) =====
-FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04 as gpu
+FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04 as gpu
 
 WORKDIR /app
 
@@ -87,9 +87,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy requirements and install dependencies
 COPY requirements.txt .
 
-# Install PyTorch with CUDA support and other requirements
+# Install PyTorch with CUDA 12.4 support and other requirements
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir torch>=2.1.0 --index-url https://download.pytorch.org/whl/cu121 && \
+    pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124 && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
