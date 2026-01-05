@@ -461,7 +461,6 @@ class FineTuneService:
             learning_rate=hp.learning_rate,
             weight_decay=hp.weight_decay,
             warmup_steps=hp.warmup_steps,
-            max_seq_length=hp.max_seq_length,
             fp16=hp.fp16 and self.device_info.get("fp16_supported", False),
             bf16=hp.bf16 and self.device_info.get("bf16_supported", False),
             logging_steps=hp.logging_steps,
@@ -494,6 +493,7 @@ class FineTuneService:
             eval_dataset=eval_dataset,
             processing_class=tokenizer,
             callbacks=[progress_callback],
+            max_seq_length=hp.max_seq_length,
         )
         
         return trainer
