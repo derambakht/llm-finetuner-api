@@ -452,7 +452,7 @@ class FineTuneService:
         
         hp = config.hyperparameters
         
-        # Training arguments
+        # Training arguments - using SFTConfig with minimal parameters
         training_args = SFTConfig(
             output_dir=config.output_dir,
             num_train_epochs=hp.num_train_epochs,
@@ -466,8 +466,6 @@ class FineTuneService:
             logging_steps=hp.logging_steps,
             save_steps=hp.save_steps,
             save_total_limit=2,
-            evaluation_strategy="steps" if eval_dataset else "no",
-            eval_steps=hp.eval_steps if eval_dataset else None,
             max_steps=hp.max_steps if hp.max_steps > 0 else -1,
             report_to="none",
             optim="adamw_torch",
@@ -476,6 +474,11 @@ class FineTuneService:
             dataset_text_field="text",
             packing=False,
         )
+        
+        # Set evaluation strategy if eval dataset exists
+        if eval_dataset:
+            training_args.eval_strategy = "steps"
+            training_args.eval_steps = hp.eval_steps
         
         # Progress callback - create dynamically to inherit from TrainerCallback
         ProgressCallback = _create_progress_callback_class()
