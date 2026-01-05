@@ -473,6 +473,7 @@ class FineTuneService:
             gradient_checkpointing_kwargs={"use_reentrant": False},
             dataset_text_field="text",
             packing=False,
+            max_seq_length=hp.max_seq_length,
         )
         
         # Set evaluation strategy if eval dataset exists
@@ -496,7 +497,6 @@ class FineTuneService:
             eval_dataset=eval_dataset,
             processing_class=tokenizer,
             callbacks=[progress_callback],
-            max_seq_length=hp.max_seq_length,
         )
         
         return trainer
