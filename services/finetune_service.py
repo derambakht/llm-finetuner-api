@@ -452,34 +452,43 @@ class FineTuneService:
         
         hp = config.hyperparameters
         
-        # Training arguments - using SFTConfig with minimal parameters
-        training_args = SFTConfig(
-            output_dir=config.output_dir,
-            num_train_epochs=hp.num_train_epochs,
-            per_device_train_batch_size=hp.per_device_train_batch_size,
-            gradient_accumulation_steps=hp.gradient_accumulation_steps,
-            learning_rate=hp.learning_rate,
-            weight_decay=hp.weight_decay,
-            warmup_steps=hp.warmup_steps,
-            fp16=hp.fp16 and self.device_info.get("fp16_supported", False),
-            bf16=hp.bf16 and self.device_info.get("bf16_supported", False),
-            logging_steps=hp.logging_steps,
-            save_steps=hp.save_steps,
-            save_total_limit=2,
-            max_steps=hp.max_steps if hp.max_steps > 0 else -1,
-            report_to="none",
-            optim="adamw_torch",
-            gradient_checkpointing=True,
-            gradient_checkpointing_kwargs={"use_reentrant": False},
-            dataset_text_field="text",
-            packing=False,
-            max_seq_length=hp.max_seq_length,
-        )
+        # Build training arguments dict - will filter out unsupported params
+        training_args_dict = {
+            "output_dir": config.output_dir,
+            "num_train_epochs": hp.num_train_epochs,
+            "per_device_train_batch_size": hp.per_device_train_batch_size,
+            "gradient_accumulation_steps": hp.gradient_accumulation_steps,
+            "learning_rate": hp.learning_rate,
+            "weight_decay": hp.weight_decay,
+            "warmup_steps": hp.warmup_steps,
+            "fp16": hp.fp16 and self.device_info.get("fp16_supported", False),
+            "bf16": hp.bf16 and self.device_info.get("bf16_supported", False),
+            "logging_steps": hp.logging_steps,
+            "save_steps": hp.save_steps,
+            "save_total_limit": 2,
+            "max_steps": hp.max_steps if hp.max_steps > 0 else -1,
+            "report_to": "none",
+            "optim": "adamw_torch",
+            "gradient_checkpointing": True,
+            "gradient_checkpointing_kwargs": {"use_reentrant": False},
+            "dataset_text_field": "text",
+            "packing": False,
+        }
+        
+        # Try to create SFTConfig, filtering out unsupported parameters
+        import inspect
+        sft_config_params = inspect.signature(SFTConfig.__init__).parameters
+        filtered_args = {k: v for k, v in training_args_dict.items() if k in sft_config_params}
+        
+        training_args = SFTConfig(**filtered_args)
         
         # Set evaluation strategy if eval dataset exists
         if eval_dataset:
             training_args.eval_strategy = "steps"
             training_args.eval_steps = hp.eval_steps
+        
+        # Store max_seq_length for later use
+        self._max_seq_length = hp.max_seq_length
         
         # Progress callback - create dynamically to inherit from TrainerCallback
         ProgressCallback = _create_progress_callback_class()
@@ -489,15 +498,22 @@ class FineTuneService:
             cancel_event=cancel_event,
         )
         
-        # Create trainer
-        trainer = SFTTrainer(
-            model=model,
-            args=training_args,
-            train_dataset=train_dataset,
-            eval_dataset=eval_dataset,
-            processing_class=tokenizer,
-            callbacks=[progress_callback],
-        )
+        # Create trainer - try with max_seq_length if supported
+        trainer_kwargs = {
+            "model": model,
+            "args": training_args,
+            "train_dataset": train_dataset,
+            "eval_dataset": eval_dataset,
+            "processing_class": tokenizer,
+            "callbacks": [progress_callback],
+        }
+        
+        # Try to add max_seq_length if supported by SFTTrainer
+        sft_trainer_params = inspect.signature(SFTTrainer.__init__).parameters
+        if "max_seq_length" in sft_trainer_params:
+            trainer_kwargs["max_seq_length"] = hp.max_seq_length
+        
+        trainer = SFTTrainer(**trainer_kwargs)
         
         return trainer
     
